@@ -1,7 +1,7 @@
-#Operating System Ex2
+# Operating System Ex2
 
 
-##How to run?
+## How to run?
 In order to compile all classes on gcc compiler:
 * make all
 
