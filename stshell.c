@@ -7,173 +7,30 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define MAX_ARGS 256
-
-
-// execute a command with input and output redirection
-void exec_cmd(char **args, int input_fd, int output_fd) {
-    pid_t PID = fork();     //the PID of the child process
-    if (PID < 0) {
-        fprintf(stderr, "fork: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    } else if (PID == 0) {
-        if (input_fd != STDIN_FILENO) {
-            if (dup2(input_fd, STDIN_FILENO) == -1) {
-                fprintf(stderr, "Error: %s\n", strerror(errno));
-                exit(EXIT_FAILURE);
-            }
-            close(input_fd);
-        }
-        if (output_fd != STDOUT_FILENO) {
-            if (dup2(output_fd, STDOUT_FILENO) == -1) {
-                fprintf(stderr, "Error: %s\n", strerror(errno));
-                exit(EXIT_FAILURE);
-            }
-            close(output_fd);
-        }
-        if (execvp(args[0], args) == -1) {
-            fprintf(stderr, "execvp: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-    } else {
-        if (waitpid(PID, NULL, 0) == -1) {
-            fprintf(stderr, "wait: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-    }
-}
-
-
-// int main() {
-//     signal(SIGINT,signal_handler);
-
-//     char cmd[1024];
-//     char *args[MAX_ARGS];
-//     int arg_count;
-//     char *token;
-//     int input_fd;
-//     int output_fd;
-    
-//     while (1) {
-//         // printf("> ");
-//         fflush(stdout);
-//         if (fgets(cmd, 1024, stdin) == NULL) {
-//             break;
-//         }
-        
-//         if (cmd[strlen(cmd) - 1] == '\n') {
-//             cmd[strlen(cmd) - 1] = '\0';
-//         }
-
-//         arg_count = 0;
-//         token = strtok(cmd, " ");
-//         input_fd = STDIN_FILENO;
-//         output_fd = STDOUT_FILENO;
-        
-//         //command line parser
-//         while (token != NULL) {
-//             if (strcmp(token, "|") == 0) {
-//                 int pipe_fds[2];
-//                 if (pipe(pipe_fds) < 0) {
-//                     perror("pipe");
-//                     exit(EXIT_FAILURE);
-//                 }
-//                 exec_cmd(args, input_fd, pipe_fds[1]);
-//                 close(pipe_fds[1]);
-//                 input_fd = pipe_fds[0];
-//                 arg_count = 0;
-//             } else if (strcmp(token, ">") == 0) {
-//                 token = strtok(NULL, " ");
-//                 output_fd = open(token, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-//                 if (output_fd < 0) {
-//                     perror("open");
-//                     exit(EXIT_FAILURE);
-//                 }
-//             } else if (strcmp(token, ">>") == 0) {
-//                 token = strtok(NULL, " ");
-//                 output_fd = open(token, O_WRONLY | O_CREAT | O_APPEND, 0666);
-//                 if (output_fd < 0) {
-//                     perror("open");
-//                     exit(EXIT_FAILURE);
-//                 }
-//             } else if (strcmp(token, "exit") == 0) {
-//                 exit(EXIT_SUCCESS);
-//             } else {
-//                 args[arg_count++] = token;
-//             }
-//             token = strtok(NULL, " ");
-//         }
-//         args[arg_count] = NULL;
-//         exec_cmd(args, input_fd, output_fd);
-//     }
-
-//     return 0;
-// }
-
-
-
-void signal_handler(int sig) {
+//ignore the command ^C
+void signal_handler() {
     printf("\n");
 }
 
-void parse_input(char* cmd, char** args, int* arg_count, int* input_fd, int* output_fd) {
-    char *token = strtok(cmd, " ");
-    *arg_count = 0;
-    *input_fd = STDIN_FILENO;
-    *output_fd = STDOUT_FILENO;
-
-    while (token != NULL) {
-        if (strcmp(token, "|") == 0) {
-            int pipe_fds[2];
-            if (pipe(pipe_fds) < 0) {
-                perror("pipe");
-                exit(EXIT_FAILURE);
-            }
-            exec_cmd(args, *input_fd, pipe_fds[1]);
-            close(pipe_fds[1]);
-            *input_fd = pipe_fds[0];
-            *arg_count = 0;
-        } else if (strcmp(token, ">") == 0) {
-            token = strtok(NULL, " ");
-            *output_fd = open(token, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-            if (*output_fd < 0) {
-                perror("open");
-                exit(EXIT_FAILURE);
-            }
-        } else if (strcmp(token, ">>") == 0) {
-            token = strtok(NULL, " ");
-            *output_fd = open(token, O_WRONLY | O_CREAT | O_APPEND, 0666);
-            if (*output_fd < 0) {
-                perror("open");
-                exit(EXIT_FAILURE);
-            }
-        } else if (strcmp(token, "exit") == 0) {
-            exit(EXIT_SUCCESS);
-        } else {
-            args[(*arg_count)++] = token;
-        }
-        token = strtok(NULL, " ");
-    }
-    args[*arg_count] = NULL;
-}
-void execute_commands(char** args, int input_fd, int output_fd) {
-    pid_t pid = fork();
-    switch (pid) {
+//commands executer
+void cmd(int inputF, int outputF, char** args) {
+    int p_id = fork();
+    switch (p_id) {
         case -1:
-            perror("fork");
+            fprintf(stderr, "fork: %s\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
         case 0:
-            if (input_fd != STDIN_FILENO) {
-                dup2(input_fd, STDIN_FILENO);
-                close(input_fd);
+            if (inputF != STDIN_FILENO) {
+                dup2(inputF, STDIN_FILENO);
+                close(inputF);
             }
-            if (output_fd != STDOUT_FILENO) {
-                dup2(output_fd, STDOUT_FILENO);
-                close(output_fd);
+            if (outputF != STDOUT_FILENO) {
+                dup2(outputF, STDOUT_FILENO);
+                close(outputF);
             }
             if (execvp(args[0], args) == -1) {
-                perror("execvp");
+                fprintf(stderr, "execvp: %s\n", strerror(errno));
                 exit(EXIT_FAILURE);
             }
             break;
@@ -183,27 +40,70 @@ void execute_commands(char** args, int input_fd, int output_fd) {
     }
 }
 
+//input parser
+void parser(char* command, char** args, int* argCount, int* inputF, int* outputF) {
+    char *token = strtok(command, " ");
+    *argCount = 0;
+    *inputF = STDIN_FILENO;
+    *outputF = STDOUT_FILENO;
+
+    while (token != NULL) {
+        if (strcmp(token, "|") == 0) {
+            int piping[2];
+            if (pipe(piping) < 0) {
+                fprintf(stderr, "pipe: %s\n", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            cmd(*inputF, piping[1], args);
+            close(piping[1]);
+            *inputF = piping[0];
+            *argCount = 0;
+        } else if (strcmp(token, ">") == 0) {
+            token = strtok(NULL, " ");
+            *outputF = open(token, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (*outputF < 0) {
+                fprintf(stderr, "open: %s\n", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+        } else if (strcmp(token, ">>") == 0) {
+            token = strtok(NULL, " ");
+            *outputF = open(token, O_WRONLY | O_CREAT | O_APPEND, 0666);
+            if (*outputF < 0) {
+                fprintf(stderr, "open: %s\n", strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+        } else if (strcmp(token, "exit") == 0) {
+            exit(EXIT_SUCCESS);
+        } else {
+            args[(*argCount)++] = token;
+        }
+        token = strtok(NULL, " ");
+    }
+    args[*argCount] = NULL;
+}
+
+
 int main() {
     signal(SIGINT, signal_handler);
-    char cmd[1024];
-    char *args[MAX_ARGS];
-    int arg_count;
-    int input_fd;
-    int output_fd;
+    int outputF;
+    int inputF;
+    char *args[256];
+    int argCount;
+    char command[1024];
     
     while (1) {
-        // printf("> ");
         fflush(stdout);
-        if (fgets(cmd, 1024, stdin) == NULL) {
+        if (fgets(command, 1024, stdin) == NULL) {
             break;
         }
         
-        if (cmd[strlen(cmd) - 1] == '\n') {
-            cmd[strlen(cmd) - 1] = '\0';
+        //from basic shell
+        if (command[strlen(command) - 1] == '\n') {
+            command[strlen(command) - 1] = '\0';
         }
         
-        parse_input(cmd, args, &arg_count, &input_fd, &output_fd);
-        execute_commands(args, input_fd, output_fd);
+        parser(command, args, &argCount, &inputF, &outputF);
+        cmd(inputF, outputF, args);
     }
 
     return 0;
