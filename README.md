@@ -1,23 +1,36 @@
 # Operating System Ex2
 
-Compile the shared libraries codecA and codecB:
+The task is made of 3 parts: files operations, dynamic libraries, and basic shell.
 
-gcc -shared -fPIC -o codecA.so codecA.c
-gcc -shared -fPIC -o codecB.so codecB.c
+### Part A
+Contains:
+* Tool 1:
+cmp- the tool will compare two files, and return “0” if they are equal, and “1” if not.
+Supports -v flag for verbose output and the -i flag, for “ignore case”.
 
-Compile the encode and decode tools using the shared libraries:
-gcc -o encode encode.c -ldl
-gcc -o decode decode.c -ldl
+usage: cmp <file1> <file2> -v
+output: equal
 
-("-ldl" flag is used to link the tools against the dynamic loading library)
+* Tool 2:
+copy-  the tool will copy a file to another place and/or name.
+The tool will return “0” on success, or “1” on failure.
+Supports -v for verbose flag and -f flag for force, allows to overwrite the target file.
+usage copy <file1> <file2> -v
+output: success
 
-Make sure that all four files (codecA.so, codecB.so, encode, and decode) are in the same directory.
-Here's an example of how to encode a message using codecA and the encode tool:
+### Part B
+Usage : encode/decode <codec> <message>
 
-./encode codecA "aaaBBB"
-./decode codecA "AAAbbb"
+output: encoded/decoded string
 
-## How to run?
+example: “encode codecA aaaBBB” will return “AAAbbb”
+
+example: “decode codecB EEEddd” will return “BBBaaa”
+
+### Part C
+Our implementation for a shell program.
+
+## How to run the program?
 In order to compile all classes on gcc compiler:
 * make all
 
